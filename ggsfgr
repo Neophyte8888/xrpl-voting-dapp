@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Westworld Voting dApp</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+        button { padding: 15px 30px; margin: 10px; font-size: 18px; cursor: pointer; }
+        #results { margin-top: 20px; font-size: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Westworld Voting on XRPL EVM Testnet</h1>
+    <p>Vote for Hosts or Humans!</p>
+    <button onclick="connectWallet()">Connect MetaMask</button>
+    <button onclick="voteForHosts()" disabled id="voteHosts">Vote for Hosts</button>
+    <button onclick="voteForHumans()" disabled id="voteHumans">Vote for Humans</button>
+    <div id="results">Results: Hosts: 0, Humans: 0</div>
+    <p>Contract: <a href="https://evm-sidechain.xrpl.org/address/0xF9946251F95E03Eb04E1bf9B0d6A52f2213EB0a2">0x...</a></p>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <script>
+        const contractAddress = "0xF9946251F95E03Eb04E1bf9B0d6A52f2213EB0a2"; // Замени на адрес твоего контракта
+        const abi = [
+            "function voteForHosts()",
+            "function voteForHumans()",
+            "function getResults() view returns (uint256, uint256)",
+            "function hasVoted(address) view returns (bool)"
+        ];
+        let provider, signer, contract;
+
+        async function connectWallet() {
+            if (window.ethereum) {
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = provider.getSigner();
+                contract = new ethers.Contract(contractAddress, abi, signer);
+                document.getElementById("voteHosts").disabled = false;
+                document.getElementById("voteHumans").disabled = false;
+                updateResults();
+                checkVoted();
+            } else {
+                alert("Please install MetaMask!");
+            }
+        }
+
+        async function voteForHosts() {
+            try {
+                const tx = await contract.voteForHosts();
+                await tx.wait();
+                alert("Voted for Hosts!");
+                updateResults();
+                checkVoted();
+            } catch (error) {
+                alert("Error: " + error.message);
+            }
+        }
+
+        async function voteForHumans() {
+            try {
+                const tx = await contract.voteForHumans();
+                await tx.wait();
+                alert("Voted for Humans!");
+                updateResults();
+                checkVoted();
+            } catch (error) {
+                alert("Error: " + error.message);
+            }
+        }
+
+        async function updateResults() {
+            const [hosts, humans] = await contract.getResults();
+            document.getElementById("results").innerText = `Results: Hosts: ${hosts}, Humans: ${humans}`;
+        }
+
+        async function checkVoted() {
+            const userAddress = await signer.getAddress();
+            const hasVoted = await contract.hasVoted(userAddress);
+            if (hasVoted) {
+                document.getElementById("voteHosts").disabled = true;
+                document.getElementById("voteHumans").disabled = true;
+            }
+        }
+    </script>
+</body>
+</html>
